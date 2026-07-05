@@ -1,7 +1,8 @@
 
 pub mod Test01 {
 
-    use BasicParsers.Parse.{runParser, char, alt, seqRight, many1Char, upper}
+    use BasicParsers.Parse.{runParser, char, alt, seqRight, many1Char, upper,
+        literal}
 
     @Test
     def test01(): Unit \ Assert = 
@@ -26,6 +27,11 @@ pub mod Test01 {
     @Test
     def many1Char01(): Unit \ Assert = 
         let ans = runParser(_ -> many1Char(upper), "ABC EFG");
+        Assert.assertEq(expected = Ok("ABC"), ans)
+
+    @Test
+    def literal01(): Unit \ Assert = 
+        let ans = runParser(_ -> literal("ABC"), "ABC EFG");
         Assert.assertEq(expected = Ok("ABC"), ans)
 
 }

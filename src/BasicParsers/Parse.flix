@@ -16,7 +16,7 @@
 
 
 pub mod BasicParsers.Parse { 
-
+    
     use EffectExtras.Alt.Alt
 
     
@@ -26,7 +26,7 @@ pub mod BasicParsers.Parse {
         def getPos(): Int32
         def setPos(i: Int32): Unit
         def atEnd(): Bool
-        // def satisfies(f: String -> Option[(Int32, String)]): Option[String]
+        def takeString(i:Int32): Option[String]
     }
 
 
@@ -71,16 +71,16 @@ pub mod BasicParsers.Parse {
                 k(pos >= endpos)
             }
 
-            // def satisfies(pred, k) = {
-            //     let pos = Ref.get(position);
-            //     match pred(String.slice(start=pos, end=endpos, source)) {
-            //         case Some((consumed, ans)) => {
-            //             Ref.put(pos + consumed, position);
-            //             k(Some(ans))
-            //         }
-            //         case None => k(None)
-            //     }
-            // }
+            def takeString(i, k) = {
+                let pos = Ref.get(position);
+                let end = pos + i;
+                if (end <= endpos) 
+                {
+                    let ans = String.slice(start=pos, end=end, source);
+                    Ref.put(end, position);
+                    k(Some(ans))
+                } else k(None)
+            }
         }
 
     }
@@ -89,12 +89,6 @@ pub mod BasicParsers.Parse {
         run {
             handle(s, p)()
         } with EffectExtras.Alt.runWithResult
-
-
-    def answerOrFail(msg: String, sk: a -> ans \ ef, o: Option[a]): ans \ Alt + ef = match o {
-        case Some(a) => sk(a)
-        case None  => Alt.failure(msg)
-    }
 
 
     pub def alt(p: Unit -> a \ BasicParse + ef1, q: Unit -> a \ BasicParse + ef2): a \ BasicParse + ef1 + ef2 =
@@ -117,14 +111,20 @@ pub mod BasicParsers.Parse {
 
     pub def satisfy(test: Char -> Bool \ ef): Char \ BasicParse + ef = 
         match Parse.peekChar() {
-            case Some(c) => if (test(c)) Parse.anyChar() else None
-            case _       => None
-        } |> answerOrFail("satisfy", identity)
+            case Some(c) => if (test(c)) {let _ = Parse.anyChar(); c} else Alt.failure("satisfy")
+            case _       => Alt.failure("satisfy")
+        }
 
     pub def char(c: Char): Char \ BasicParse = 
         satisfy(c1 -> c1 == c)
 
+    pub def literal(s: String): String \ BasicParse = 
+        match Parse.takeString(String.length(s)) {
+            case Some(s1) if s1 == s => s1
+            case _                   => Alt.failure("literal not ${s}")
+        }
 
+    // Note - need to thunkify the alternatives supplied to `alt`...
     pub def aOrB(): Char \ BasicParse = 
         alt(_ -> char('a'), _ -> char('b'))
 
