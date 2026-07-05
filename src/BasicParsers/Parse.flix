@@ -16,9 +16,6 @@
 
 
 pub mod BasicParsers.Parse { 
-    use BasicParsers.Parse.Parser
-    use BasicParsers.Parse.satisfy
-
 
     use EffectExtras.Alt.Alt
 
@@ -32,7 +29,6 @@ pub mod BasicParsers.Parse {
         // def satisfies(f: String -> Option[(Int32, String)]): Option[String]
     }
 
-    pub type alias Parser[a: Type, ef: Eff] = Unit -> a \ ef
 
     pub type alias BasicParse = Parse + Alt
 
@@ -89,7 +85,7 @@ pub mod BasicParsers.Parse {
 
     }
 
-    pub def runParser(p: Parser[a, BasicParse + ef], s: String): Result[String, a] \ ef - Alt - Parse = 
+    pub def runParser(p: Unit -> a \ BasicParse + ef, s: String): Result[String, a] \ ef - Alt - Parse = 
         run {
             handle(s, p)()
         } with EffectExtras.Alt.runWithResult
@@ -101,22 +97,22 @@ pub mod BasicParsers.Parse {
     }
 
 
-    pub def alt(p: Parser[a, BasicParse + ef1], q: Parser[a, BasicParse + ef2]): Parser[a, BasicParse + ef1 + ef2] = _ ->
+    pub def alt(p: Unit -> a \ BasicParse + ef1, q: Unit -> a \ BasicParse + ef2): a \ BasicParse + ef1 + ef2 =
         EffectExtras.Alt.alt(p, q)
 
 
-    pub def eof(): Parser[Bool, Parse] = _ -> Parse.atEnd()
+    pub def eof(): Bool \ Parse = Parse.atEnd()
 
-    pub def parseEof(): Parser[Unit, BasicParse] = _ ->
-        if (eof()()) () else Alt.failure("parseEof - failed")
+    pub def parseEof(): Unit \ BasicParse = 
+        if (eof()) () else Alt.failure("parseEof - failed")
 
-    pub def satisfy(test: Char -> Bool \ ef): Parser[Char, BasicParse + ef] = _ ->
+    pub def satisfy(test: Char -> Bool \ ef): Char \ BasicParse + ef = 
         match Parse.peekChar() {
             case Some(c) => if (test(c)) Parse.anyChar() else None
             case _       => None
         } |> answerOrFail("satisfy", identity)
 
-    pub def char(c: Char): Parser[Char, BasicParse] = 
+    pub def char(c: Char): Char \ BasicParse = 
         satisfy(c1 -> c1 == c)
 
 
@@ -126,18 +122,18 @@ pub mod BasicParsers.Parse {
     //         case _                   => None
     //     }) |> answerOrFail("string - not ${s}", _ -> s)
 
-    pub def aOrB(): Parser[Char, BasicParse] = 
-        alt(char('a'), char('b'))
+    pub def aOrB(): Char \ BasicParse = 
+        alt(_ -> char('a'), _ -> char('b'))
 
-    pub def tryParse(p: Parser[a, BasicParse]): Parser[a, BasicParse] = _ ->
+    pub def tryParse(p: Unit -> a \ BasicParse + ef): a \ BasicParse + ef = 
         let pos = getPos();
-        alt(p, _ -> { setPos(pos); Alt.failure("")})()
+        alt(p, _ -> { setPos(pos); Alt.failure("")})
 
 
-    pub def oneOf(cs: List[Char]): Parser[Char, BasicParse] =
+    pub def oneOf(cs: List[Char]): Char \ BasicParse =
         satisfy(c -> List.memberOf(c, cs))
     
-    pub def noneOf(cs: List[Char]): Parser[Char, BasicParse] =
+    pub def noneOf(cs: List[Char]): Char \ BasicParse =
         satisfy(c -> not List.memberOf(c, cs))
 
 }
