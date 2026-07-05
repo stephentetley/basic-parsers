@@ -101,6 +101,15 @@ pub mod BasicParsers.Parse {
         EffectExtras.Alt.alt(p, q)
 
 
+    pub def seqRight(p: Unit -> a \ BasicParse + ef1, q: Unit -> b \ BasicParse + ef2): b \ BasicParse + ef1 + ef2 =
+        let _ = p();
+        q()
+
+    pub def seqLeft(p: Unit -> a \ BasicParse + ef1, q: Unit -> b \ BasicParse + ef2): a \ BasicParse + ef1 + ef2 =
+        let ans = p();
+        let _ = q();
+        ans
+
     pub def eof(): Bool \ Parse = Parse.atEnd()
 
     pub def parseEof(): Unit \ BasicParse = 
@@ -116,12 +125,6 @@ pub mod BasicParsers.Parse {
         satisfy(c1 -> c1 == c)
 
 
-    // pub def string(s: String): String \ BasicParse = 
-    //     Parse.satisfies(input -> match String.sliceLeft(end = String.length(s), input) {
-    //         case s1 if s1 == s => Some((1, s))
-    //         case _                   => None
-    //     }) |> answerOrFail("string - not ${s}", _ -> s)
-
     pub def aOrB(): Char \ BasicParse = 
         alt(_ -> char('a'), _ -> char('b'))
 
@@ -135,6 +138,40 @@ pub mod BasicParsers.Parse {
     
     pub def noneOf(cs: List[Char]): Char \ BasicParse =
         satisfy(c -> not List.memberOf(c, cs))
+
+    pub def upper(): Char \ BasicParse =
+        satisfy(Char.isUpperCase)
+
+    pub def lower(): Char \ BasicParse =
+        satisfy(Char.isLowerCase)
+
+    pub def many(p: Unit -> a \ BasicParse + ef): List[a] \ BasicParse + ef = 
+        def loop(k) = {
+            match EffectExtras.Alt.optional(p) {
+                case Some(a) => loop(ks -> k(List.cons(a, ks)))
+                case None => k(Nil)
+            }
+        };
+        loop(identity)
+
+    pub def many1(p: Unit -> a \ BasicParse + ef): List[a] \ BasicParse + ef = 
+        let first = p();
+        let tail = many(p);
+        first :: tail
+
+    pub def manyChar(p: Unit -> Char \ BasicParse + ef): String \ BasicParse + ef = 
+        def loop(k) = {
+            match EffectExtras.Alt.optional(p) {
+                case Some(c) => loop(ks -> k(ToString.toString(c) +  ks))
+                case None => k("")
+            }
+        };
+        loop(identity)
+
+    pub def many1Char(p: Unit -> Char \ BasicParse + ef): String \ BasicParse + ef = 
+        let first = p();
+        let tail = manyChar(p);
+        ToString.toString(first) + tail
 
 }
 
