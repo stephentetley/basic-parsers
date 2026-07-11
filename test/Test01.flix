@@ -1,7 +1,8 @@
 
 pub mod Test01 {
 
-    use BasicParsers.Parse.{runParser, char, alt, seqRight, many1Char, upper,
+    use EffectExtras.Alt.{alt}
+    use BasicParsers.Parse.{runParser, char, seqRight, many1Char, upper,
         literal}
 
     @Test

@@ -91,9 +91,6 @@ pub mod BasicParsers.Parse {
         } with EffectExtras.Alt.runWithResult
 
 
-    pub def alt(p: Unit -> a \ BasicParse + ef1, q: Unit -> a \ BasicParse + ef2): a \ BasicParse + ef1 + ef2 =
-        EffectExtras.Alt.alt(p, q)
-
 
     pub def seqRight(p: Unit -> a \ BasicParse + ef1, q: Unit -> b \ BasicParse + ef2): b \ BasicParse + ef1 + ef2 =
         let _ = p();
@@ -121,16 +118,16 @@ pub mod BasicParsers.Parse {
     pub def literal(s: String): String \ BasicParse = 
         match Parse.takeString(String.length(s)) {
             case Some(s1) if s1 == s => s1
-            case _                   => Alt.failure("literal not ${s}")
+            case _                   => Alt.failure("literal - not ${s}")
         }
 
     // Note - need to thunkify the alternatives supplied to `alt`...
     pub def aOrB(): Char \ BasicParse = 
-        alt(_ -> char('a'), _ -> char('b'))
+        EffectExtras.Alt.alt(_ -> char('a'), _ -> char('b'))
 
     pub def tryParse(p: Unit -> a \ BasicParse + ef): a \ BasicParse + ef = 
         let pos = getPos();
-        alt(p, _ -> { setPos(pos); Alt.failure("")})
+        EffectExtras.Alt.alt(p, _ -> { setPos(pos); Alt.failure("")})
 
 
     pub def oneOf(cs: List[Char]): Char \ BasicParse =
@@ -145,33 +142,16 @@ pub mod BasicParsers.Parse {
     pub def lower(): Char \ BasicParse =
         satisfy(Char.isLowerCase)
 
-    pub def many(p: Unit -> a \ BasicParse + ef): List[a] \ BasicParse + ef = 
-        def loop(k) = {
-            match EffectExtras.Alt.optional(p) {
-                case Some(a) => loop(ks -> k(List.cons(a, ks)))
-                case None => k(Nil)
-            }
-        };
-        loop(identity)
-
-    pub def many1(p: Unit -> a \ BasicParse + ef): List[a] \ BasicParse + ef = 
-        let first = p();
-        let tail = many(p);
-        first :: tail
-
     pub def manyChar(p: Unit -> Char \ BasicParse + ef): String \ BasicParse + ef = 
-        def loop(k) = {
-            match EffectExtras.Alt.optional(p) {
-                case Some(c) => loop(ks -> k(ToString.toString(c) +  ks))
-                case None => k("")
-            }
-        };
-        loop(identity)
+        EffectExtras.Alt.manyWith((c, s) -> "${c}${s}", "", p)
+
 
     pub def many1Char(p: Unit -> Char \ BasicParse + ef): String \ BasicParse + ef = 
         let first = p();
         let tail = manyChar(p);
         ToString.toString(first) + tail
+
+            
 
 }
 
